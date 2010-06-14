@@ -34,7 +34,7 @@ module Vanity
     class Base
 
       class << self
-        
+
         # Returns the type of this class as a symbol (e.g. AbTest becomes
         # ab_test).
         def type
@@ -70,6 +70,7 @@ module Vanity
         @options = options || {}
         @namespace = "#{@playground.namespace}:#{@id}"
         @identify_block = method(:default_identify)
+        @bot_resistant = false
       end
 
       # Human readable experiment name (first argument you pass when creating a
@@ -91,7 +92,7 @@ module Vanity
       def type
         self.class.type
       end
-     
+
       # Defines how we obtain an identity for the current experiment.  Usually
       # Vanity gets the identity form a session object (see use_vanity), but
       # there are cases where you want a particular experiment to use a
@@ -137,6 +138,16 @@ module Vanity
         @complete_block = block
       end
 
+      # Call to indicate that participants should be added via js
+      # Be sure to add the <%= Vanity.participant_js %> to views that use it
+      def be_bot_resistant
+        @bot_resistant = true
+      end
+
+      def bot_resistant?
+        @bot_resistant
+      end
+
       # Force experiment to complete.
       def complete!
         redis.setnx key(:completed_at), Time.now.to_i
@@ -149,7 +160,7 @@ module Vanity
         @completed_at ||= redis[key(:completed_at)]
         @completed_at && Time.at(@completed_at.to_i)
       end
-      
+
       # Returns true if experiment active, false if completed.
       def active?
         !redis.exists(key(:completed_at))
@@ -193,7 +204,7 @@ module Vanity
           end
         end
       end
-      
+
       # Returns key for this experiment, or with an argument, return a key
       # using the experiment as the namespace.  Examples:
       #   key => "vanity:experiments:green_button"
@@ -206,7 +217,7 @@ module Vanity
       def redis
         @playground.redis
       end
-      
+
     end
   end
 end

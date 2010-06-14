@@ -32,7 +32,9 @@ module Vanity
           define_method :vanity_identity do
             return @vanity_identity if @vanity_identity
             if symbol && object = send(symbol)
-              @vanity_identity = object.id
+              @vanity_identity = cookies["vanity_id"] || object.id
+              cookies["vanity_id"] = { :value=>@vanity_identity, :expires=>1.month.from_now }
+              @vanity_identity
             elsif response # everyday use
               @vanity_identity = cookies["vanity_id"] || ActiveSupport::SecureRandom.hex(16)
               cookies["vanity_id"] = { :value=>@vanity_identity, :expires=>1.month.from_now }
@@ -137,6 +139,12 @@ module Vanity
           value
         end
       end
+
+      def bot_resistant_js(experiment, vanity_controller=:vanity)
+        javascript_tag do
+          render Vanity.template("bot_resistant.js.erb"), :experiment => experiment
+        end
+      end
     end
 
 
@@ -158,6 +166,16 @@ module Vanity
         exp = Vanity.playground.experiment(params[:e])
         exp.chooses(exp.alternatives[params[:a].to_i].value)
         render :partial=>Vanity.template("experiment"), :locals=>{ :experiment=>exp }
+      end
+
+      def add_participant
+        experiment = Vanity.playground.experiment(params[:e])
+        if request.xhr? && experiment && experiment.bot_resistant?
+          experiment.add_participant
+          render :status => 200, :nothing => true
+        else
+          render :status => 400, :nothing => true
+        end
       end
     end
   end

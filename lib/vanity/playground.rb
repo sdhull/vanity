@@ -43,7 +43,7 @@ module Vanity
       end
       @loading = []
     end
-   
+
     # Deprecated. Use redis.server instead.
     attr_accessor :host, :port, :db, :password, :namespace
 
@@ -142,12 +142,12 @@ module Vanity
 
 
     # -- Connection management --
-   
+
     # Tells the playground where to find Redis.  Accepts one of the following:
     # - "hostname:port"
     # - ":port"
     # - "hostname:port:db"
-    # - Instance of Redis connection. 
+    # - Instance of Redis connection.
     def redis=(spec_or_connection)
       case spec_or_connection
       when String
@@ -188,9 +188,9 @@ module Vanity
       warn "Deprecated: use Vanity.playground.test!"
       test!
     end
-   
+
     # Use this when testing to disable Redis (e.g. if your CI server doesn't
-    # have Redis). 
+    # have Redis).
     #
     # @example Put this in config/environments/test.rb
     #   config.after_initialize { Vanity.playground.test! }
@@ -206,6 +206,10 @@ module Vanity
     #
     # @see Vanity::Playground
     attr_accessor :playground
+
+    # A way to override the default add_participant path which points to a
+    # rack middleware endpoint
+    attr_writer :add_participant_path
 
     # Returns the Vanity context.  For example, when using Rails this would be
     # the current controller, which can be used to get/set the vanity identity.
@@ -226,6 +230,9 @@ module Vanity
       path
     end
 
+    def add_participant_path
+      @add_participant_path || "/vanity/add_participant"
+    end
   end
 end
 

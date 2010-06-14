@@ -53,6 +53,22 @@ class UseVanityTest < ActionController::TestCase
     assert_equal "user_id", @controller.send(:vanity_identity)
   end
 
+  def test_vanity_cookie_is_set_from_user_id
+    @controller.current_user = mock("user", :id=>"user_id")
+    get :index
+    assert cookie = @response["Set-Cookie"].find { |c| c[/^vanity_id=/] }
+    assert expires = cookie[/vanity_id=user_id; path=\/; expires=(.*)(;|$)/, 1]
+    assert_in_delta Time.parse(expires), Time.now + 1.month, 1.minute
+    assert_equal "user_id", @controller.send(:vanity_identity)
+  end
+
+  def test_vanity_identity_set_from_cookie_before_user
+    @request.cookies['vanity_id'] = "from_last_time"
+    @controller.current_user = Object.new
+    get :index
+    assert_equal "from_last_time", @controller.send(:vanity_identity)
+  end
+
   def test_vanity_identity_with_no_user_model
     UseVanityController.class_eval do
       use_vanity nil
@@ -70,6 +86,28 @@ class UseVanityTest < ActionController::TestCase
     @controller.project_id = "576"
     get :index
     assert_equal "576", @controller.send(:vanity_identity)
+  end
+
+  def test_add_participant
+    UseVanityController.class_eval do
+      include Vanity::Rails::Dashboard
+    end
+    new_ab_test :food do
+      be_bot_resistant
+    end
+    xhr :post, :add_participant, :e => "food"
+    assert_response :success
+  end
+
+  def test_add_participant_without_ajax
+    UseVanityController.class_eval do
+      include Vanity::Rails::Dashboard
+    end
+    new_ab_test :food do
+      be_bot_resistant
+    end
+    post :add_participant, :e => "food"
+    assert_response 400
   end
 
   # query parameter filter

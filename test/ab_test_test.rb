@@ -49,7 +49,7 @@ class AbTestTest < ActionController::TestCase
       metrics :coolness
     end
   end
-  
+
   def test_returning_alternative_by_value
     new_ab_test :abcd do
       alternatives :a, :b, :c, :d
@@ -119,6 +119,21 @@ class AbTestTest < ActionController::TestCase
   end
 
 
+  # -- Bot resistant --
+
+  def test_does_not_record_participant_when_bot_resistant
+    ids = (0...200).to_a
+    new_ab_test :foobar do
+      alternatives "foo", "bar"
+      identify { ids.pop }
+      metrics :coolness
+      be_bot_resistant
+    end
+    200.times { experiment(:foobar).choose }
+    alts = experiment(:foobar).alternatives
+    assert_equal 0, alts.map(&:participants).sum
+  end
+
   # -- Running experiment --
 
   def test_returns_the_same_alternative_consistently
@@ -174,21 +189,17 @@ class AbTestTest < ActionController::TestCase
   end
 
   def test_records_conversion_only_for_participants
-    ids = ((1..100).map { |i| [-i,i,i] } * 5).shuffle.flatten # -3,3,3,-1,1,1,-7,7,7 etc
     new_ab_test :foobar do
       alternatives "foo", "bar"
-      identify { ids.pop }
+      identify { 1 }
       metrics :coolness
     end
-    500.times do
-      experiment(:foobar).choose
-      metric(:coolness).track!
-      metric(:coolness).track!
-    end
+    experiment(:foobar).choose
+    experiment(:foobar).identify { 2 }
+    metric(:coolness).track!
     alts = experiment(:foobar).alternatives
-    assert_equal 100, alts.map(&:converted).sum
+    assert_equal 0, alts.map(&:converted).sum
   end
-
 
   def test_destroy_experiment
     new_ab_test :simple do
@@ -232,6 +243,17 @@ class AbTestTest < ActionController::TestCase
     assert_equal %w{false true}, responses.uniq.sort
   end
 
+  def test_add_participant
+    new_ab_test :simple do
+      metrics :coolness
+      identify { rand }
+    end
+    experiment = Vanity.experiment(:simple)
+    old_participants = experiment.alternatives.map(&:participants)
+    experiment.add_participant
+    assert_equal old_participants.sum + 1, experiment.alternatives.map(&:participants).sum
+  end
+
   def test_ab_test_chooses_view_helper
     new_ab_test :simple do
       metrics :coolness
@@ -269,7 +291,7 @@ class AbTestTest < ActionController::TestCase
 
 
   # -- Testing with tests --
-  
+
   def test_with_given_choice
     new_ab_test :simple do
       alternatives :a, :b, :c
@@ -310,7 +332,7 @@ class AbTestTest < ActionController::TestCase
 
 
   # -- Scoring --
-  
+
   def test_scoring
     new_ab_test :abcd do
       alternatives :a, :b, :c, :d
@@ -582,7 +604,7 @@ This experiment did not run long enough to find a clear winner.
 
 
   # -- Outcome --
-  
+
   def test_completion_outcome
     new_ab_test :quick do
       outcome_is { alternatives[1] }
