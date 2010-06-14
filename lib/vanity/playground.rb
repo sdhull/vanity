@@ -103,8 +103,8 @@ module Vanity
     # Loads all metrics and experiments.  Rails calls this during
     # initialization.
     def load!
-      experiments
-      metrics
+      experiments rescue nil
+      metrics rescue nil
     end
 
     # Returns a metric (raises NameError if no metric with that identifier).
