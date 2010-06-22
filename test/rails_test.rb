@@ -99,6 +99,18 @@ class UseVanityTest < ActionController::TestCase
     assert_response :success
   end
 
+  def test_add_participant_without_e_param
+    UseVanityController.class_eval do
+      include Vanity::Rails::Dashboard
+    end
+    new_ab_test :food do
+      be_bot_resistant
+    end
+    xhr :post, :add_participant
+    assert_response 400
+    assert_equal 0, total_participants_of(:food)
+  end
+
   def test_add_participant_without_ajax
     UseVanityController.class_eval do
       include Vanity::Rails::Dashboard
@@ -108,6 +120,7 @@ class UseVanityTest < ActionController::TestCase
     end
     post :add_participant, :e => "food"
     assert_response 400
+    assert_equal 0, total_participants_of(:food)
   end
 
   # query parameter filter
@@ -237,6 +250,9 @@ require "vanity"
     tmp.close!
   end
 
+  def total_participants_of(exp)
+    Vanity.experiment(exp).alternatives.map(&:participants).sum
+  end
 
   def teardown
     super

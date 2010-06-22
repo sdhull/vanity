@@ -7,7 +7,7 @@ module Vanity
       #
       # Call with the name of a method that returns an object whose identity
       # will be used as the Vanity identity.  Confusing?  Let's try by example:
-      # 
+      #
       #   class ApplicationController < ActionController::Base
       #     use_vanity :current_user
       #
@@ -15,7 +15,7 @@ module Vanity
       #       User.find(session[:user_id])
       #     end
       #   end
-      # 
+      #
       # If that method (current_user in this example) returns nil, Vanity will
       # set the identity for you (using a cookie to remember it across
       # requests).  It also uses this mechanism if you don't provide an
@@ -71,7 +71,7 @@ module Vanity
       # intercepted, the alternative is chosen, and the user redirected to the
       # same request URL sans _vanity parameter.  This only works for GET
       # requests.
-      # 
+      #
       # For example, if the user requests the page
       # http://example.com/?_vanity=2907dac4de, the first alternative of the
       # :null_abc experiment is chosen and the user redirected to
@@ -82,7 +82,7 @@ module Vanity
           Vanity.playground.experiments.each do |id, experiment|
             if experiment.respond_to?(:alternatives)
               experiment.alternatives.each do |alt|
-                if hash = hashes.delete(experiment.fingerprint(alt)) 
+                if hash = hashes.delete(experiment.fingerprint(alt))
                   experiment.chooses alt.value
                   break
                 end
@@ -122,11 +122,11 @@ module Vanity
       #   def index
       #     render action: ab_test(:new_page)
       #   end
-      # @example A/B test inside ERB template (condition) 
+      # @example A/B test inside ERB template (condition)
       #   <%= if ab_test(:banner) %>100% less complexity!<% end %>
-      # @example A/B test inside ERB template (value) 
+      # @example A/B test inside ERB template (value)
       #   <%= ab_test(:greeting) %> <%= current_user.name %>
-      # @example A/B test inside ERB template (capture) 
+      # @example A/B test inside ERB template (capture)
       #   <% ab_test :features do |count| %>
       #     <%= count %> features to choose from!
       #   <% end %>
@@ -169,8 +169,9 @@ module Vanity
       end
 
       def add_participant
+        render(:status => 400, :nothing => true) and return if params[:e].blank? || !request.xhr?
         experiment = Vanity.playground.experiment(params[:e])
-        if request.xhr? && experiment && experiment.bot_resistant?
+        if experiment && experiment.bot_resistant?
           experiment.add_participant
           render :status => 200, :nothing => true
         else
@@ -197,7 +198,7 @@ if defined?(ActionController)
       # Sets Vanity.context to the current controller, so you can do things like:
       #   experiment(:simple).chooses(:green)
       def setup_controller_request_and_response
-        setup_controller_request_and_response_without_vanity 
+        setup_controller_request_and_response_without_vanity
         Vanity.context = @controller
       end
     end
@@ -205,7 +206,7 @@ if defined?(ActionController)
 end
 
 
-# Automatically configure Vanity.  Uses the 
+# Automatically configure Vanity.  Uses the
 if defined?(Rails)
   Rails.configuration.after_initialize do
     # Use Rails logger by default.
@@ -228,13 +229,13 @@ end
 
 # Reconnect whenever we fork under Passenger.
 if defined?(PhusionPassenger)
-  PhusionPassenger.on_event(:starting_worker_process) do |forked| 
-    if forked 
+  PhusionPassenger.on_event(:starting_worker_process) do |forked|
+    if forked
       begin
         Vanity.playground.reconnect!
       rescue Exception=>ex
-        Rails.logger.error "Error reconnecting Redis: #{ex.to_s}" 
+        Rails.logger.error "Error reconnecting Redis: #{ex.to_s}"
       end
-    end 
-  end 
+    end
+  end
 end
