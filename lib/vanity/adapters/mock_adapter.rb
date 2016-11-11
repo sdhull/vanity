@@ -141,7 +141,11 @@ module Vanity
         alt[:participants] << identity
       end
 
-      def ab_add_conversion(experiment, alternative, identity, count = 1, implicit = false)
+      def ab_add_conversion(experiment, alternative, identity, options={})
+        count = options[:count] || 1
+        implicit = !!options[:implicit]
+        metric_id = options[:metric_id] # unsupported for mock adapter
+
         @experiments[experiment] ||= {}
         @experiments[experiment][:alternatives] ||= {}
         alt = @experiments[experiment][:alternatives][alternative] ||= {}
@@ -151,7 +155,7 @@ module Vanity
         if implicit
           alt[:participants] << identity
         else
-    participating = alt[:participants].include?(identity)
+          participating = alt[:participants].include?(identity)
         end
         alt[:converted] << identity if implicit || participating
         alt[:conversions] += count
